@@ -1,3 +1,4 @@
+package lab;
 import java.util.Scanner;
 public class l2q6 {
     public static void main(String[] args) {

@@ -1,3 +1,4 @@
+package lab;
 public class l2q3 {
     public static void main(String[] args) {
         double a = 10 + Math.random() * 50;
