@@ -1,0 +1,50 @@
+name: Update branch list
+
+on:
+  create:
+  delete:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-branch-list
+  cancel-in-progress: false
+
+jobs:
+  update-readme:
+    if: github.event.ref_type == 'branch' && startsWith(github.event.ref, 'week')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Rebuild branch list in README
+        env:
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          grep -q '<!-- BRANCHES-START -->' README.md && grep -q '<!-- BRANCHES-END -->' README.md || { echo "README markers missing"; exit 1; }
+          {
+            sed '/<!-- BRANCHES-START -->/q' README.md
+            git ls-remote --heads origin \
+              | sed 's|.*refs/heads/||' \
+              | grep -E '^week' \
+              | sort -V \
+              | while read -r b; do echo "- [$b]($REPO_URL/tree/$b)"; done
+            sed -n '/<!-- BRANCHES-END -->/,$p' README.md
+          } > README.tmp
+          mv README.tmp README.md
+
+      - name: Commit and push if changed
+        run: |
+          if git diff --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Update branch list"
+          git push
